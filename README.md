@@ -1,9 +1,14 @@
 
 
-1. 설치 과정
+1. 설치 
 
+```sh
+git clone https://github.com/dudejrs/21_bigdata_project3.git
+sh ./fetch_data.sh
+	```
 
 1. 실행 방법
+
 ```sh
 streamlit run main.py
 
