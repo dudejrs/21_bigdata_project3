@@ -5,7 +5,7 @@
 ```sh
 git clone https://github.com/dudejrs/21_bigdata_project3.git
 sh ./fetch_data.sh
-	```
+```
 
 1. 실행 방법
 
