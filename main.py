@@ -10,6 +10,11 @@ import random
 import pydeck as pdk
 
 
+# Spark 이용
+# from pyspark import SparkCOnf, SparkContext
+# conf = SparkConf().setMaster("local").setAppName("My App")
+# sc = SparkContext(conf=conf)
+
 ## 김준기님 import list
 
 from bokeh.layouts import column, row, gridplot, layout
@@ -20,6 +25,7 @@ from bokeh.models import HoverTool, ColumnDataSource
 from bokeh.models import Panel, Tabs #for Tab function
 from bokeh.models import DateRangeSlider #for DateRangeSlider
 from bokeh.models import CustomJS
+from bokeh.models import FactorRange
 from bokeh.tile_providers import get_provider, Vendors
 from bokeh.tile_providers import CARTODBPOSITRON
 from bokeh.models import WMTSTileSource
@@ -28,7 +34,6 @@ from bokeh.models import Div, RangeSlider, Spinner #for widget
 
 
 st. set_page_config(layout="wide")
-st.title('streamlit test')
 
 bus_f = ['BUS_STATION_BOARDING_MONTH_201701.csv', 'BUS_STATION_BOARDING_MONTH_201702.csv', 'BUS_STATION_BOARDING_MONTH_201703.csv', 'BUS_STATION_BOARDING_MONTH_201704.csv', 'BUS_STATION_BOARDING_MONTH_201705.csv', 'BUS_STATION_BOARDING_MONTH_201706.csv', 'BUS_STATION_BOARDING_MONTH_201707.csv', 'BUS_STATION_BOARDING_MONTH_201708.csv', 'BUS_STATION_BOARDING_MONTH_201709.csv', 'BUS_STATION_BOARDING_MONTH_201710.csv', 'BUS_STATION_BOARDING_MONTH_201711.csv', 'BUS_STATION_BOARDING_MONTH_201712.csv', 'BUS_STATION_BOARDING_MONTH_201801.csv', 'BUS_STATION_BOARDING_MONTH_201802.csv', 'BUS_STATION_BOARDING_MONTH_201803.csv', 'BUS_STATION_BOARDING_MONTH_201804.csv', 'BUS_STATION_BOARDING_MONTH_201805.csv', 'BUS_STATION_BOARDING_MONTH_201806.csv', 'BUS_STATION_BOARDING_MONTH_201807.csv', 'BUS_STATION_BOARDING_MONTH_201808.csv', 'BUS_STATION_BOARDING_MONTH_201809.csv', 'BUS_STATION_BOARDING_MONTH_201810.csv', 'BUS_STATION_BOARDING_MONTH_201811.csv', 'BUS_STATION_BOARDING_MONTH_201812.csv', 'BUS_STATION_BOARDING_MONTH_201901.csv', 'BUS_STATION_BOARDING_MONTH_201902.csv', 'BUS_STATION_BOARDING_MONTH_201903.csv', 'BUS_STATION_BOARDING_MONTH_201904.csv', 'BUS_STATION_BOARDING_MONTH_201905.csv', 'BUS_STATION_BOARDING_MONTH_201906.csv', 'BUS_STATION_BOARDING_MONTH_201907.csv', 'BUS_STATION_BOARDING_MONTH_201908.csv', 'BUS_STATION_BOARDING_MONTH_201909.csv', 'BUS_STATION_BOARDING_MONTH_201910.csv', 'BUS_STATION_BOARDING_MONTH_201911.csv', 'BUS_STATION_BOARDING_MONTH_201912_1.csv']
 
@@ -54,8 +59,8 @@ data_load_state.text("Done! (using st.cache)")
 st.sidebar.subheader('Contents')
 contents = st.sidebar.selectbox(
     "choose Contents",
-    ("A",'B',"C"),
-    1
+    ('대쉬보드',"시간별 미세먼지","계절별 미세먼지","시간별 평균 미세먼지"),
+    3
     )
 
 
@@ -83,9 +88,9 @@ data2 = data2_[(data2_["사용일자"].dt.date >= start_date_slider )&(data2_["�
 ]
 
 
+st.title(contents)
 
-if contents == "A" :
-
+if contents == "시간별 미세먼지" :
 ##김준기_data_visualization-bokeh
 
     print("김준기_data_visualization-bokeh")
@@ -108,7 +113,7 @@ if contents == "A" :
     #                                     value=(start_time, end_time), step=1, width=300)
 
     # Plot #
-    plot1 = figure(title = "종로구 초미세먼지", x_axis_label="측정날짜", y_axis_label="PM2.5",\
+    plot1 = figure(title = "시간별 초미세먼지", x_axis_label="측정날짜", y_axis_label="PM2.5",\
                    x_axis_type="datetime")
 
     plot1.line(x='x', y='y', source=source1, legend_label="PM2.5", line_width=2, color="blue", line_alpha=0.5)
@@ -146,7 +151,7 @@ if contents == "A" :
     hover2 = HoverTool(tooltips=[('Timestamp', '@x'), ('미세먼지', '@y')], formatters={'x': 'datetime'},)
 
     # Plot #
-    plot2 = figure(title = "종로구 미세먼지", x_axis_label="측정날짜", y_axis_label="PM10",\
+    plot2 = figure(title = "시간별 미세먼지", x_axis_label="측정날짜", y_axis_label="PM10",\
                 x_axis_type="datetime")
 
     # Add to Plot #
@@ -191,7 +196,7 @@ if contents == "A" :
     # st.bokeh_chart(Tabs([tab1))
 
 
-elif contents == "B" :
+elif contents == "대쉬보드" :
     col1, col2, col3 = st.columns([5,4,1])
     
     if "B_pol" not in ss :
@@ -290,11 +295,91 @@ elif contents == "B" :
     print(ss.B_pol, ss.B_wtr)        
 
 
-else :
+elif contents ==  "계절별 미세먼지" :
     print("C")
+    tab_list = []
+    re_index =  [10,11,0,1,2,3,4,5,6,7,8,9]
+    regions = ['미세먼지', '초미세먼지']
+    factors = [("봄", "mar"), ("봄", "apr"), ("봄", "may"), ("여름", "jun"), ("여름", "jul"), ("여름", "aug"), ("가을", "sep"), ("가을", "oct"), ("가을", "nov"), ("겨울", "dec"), ("겨울", "jan"), ("겨울", "feb")]
 
 
+    C_data1 = data1[["Measurement date","PM10","PM2.5","Address"]] 
+    C_data1["month"] = C_data1["Measurement date"].dt.month.map(lambda l : re_index[l-1])
+    # C_data1["month_"] = C_data1["Measurement date"].dt.month
+    C_data1 = C_data1.groupby(["month","Address"],as_index=False).mean()
 
+    
+
+    for i in ss.region :
+        tmp = C_data1[C_data1["Address"] == i]
+        tmp.index = tmp["month"]
+        source = ColumnDataSource(data= dict(\
+            x=factors,\
+            미세먼지=tmp['PM10'],\
+            초미세먼지=tmp['PM2.5'],\
+            ))
+
+        p = figure(x_range=FactorRange(*factors),
+                   toolbar_location=None, tools="hover", tooltips="@x: @$name")
+        
+
+        p.vbar_stack(regions, x='x', width=0.9, alpha=0.5, color=["blue", "red"], source=source,
+                     legend_label=regions)
+
+
+        p.x_range.range_padding = 0.1
+        p.xaxis.major_label_orientation = 1
+        p.xgrid.grid_line_color = None
+        p.legend.location = "top_center"
+        p.legend.orientation = "horizontal"
+        # plot_list.append(p)
+
+        tmp_tab = Panel(child=p, title=i)
+        tab_list.append(tmp_tab)
+        # st.dataframe(tmp)        
+
+    # st.dataframe(C_data1)
+    st.bokeh_chart(Tabs(tabs=tab_list),use_container_width=True)
+
+elif contents == "시간별 평균 미세먼지" :
+    tab_list = []
+    re_index =  [4,4,1,1,1,2,2,2,3,3,3,4]
+    season_legend = ["봄","여름","가을","겨울"]
+    season_color = ["green","red","black","blue"]
+    regions = ['미세먼지', '초미세먼지']
+
+
+    D_data1 = data1[["Measurement date","PM10","Address"]] 
+    D_data1["hour"] = D_data1["Measurement date"].dt.hour
+    D_data1["season"] = D_data1["Measurement date"].dt.month.map(lambda l : re_index[l-1])
+    D_data1 = D_data1.groupby(["hour","Address","season"],as_index=False).mean()
+
+    # st.dataframe(D_data1)
+    hover1 = HoverTool(tooltips=[('Hour', '@hour'), ('미세먼지', '@PM10')],)
+
+    tab_list = []
+
+    for i in ss.region :
+        tmp = D_data1[D_data1["Address"] == i]
+        p = figure(title = "시간별 평균 미세먼지", plot_width=800, plot_height=200, x_axis_label="hour", y_axis_label="PM10")
+
+        for j in range(1,5) : 
+            source = ColumnDataSource(tmp[tmp["season"] == j])
+            p.line(x='hour', y='PM10', source=source, legend_label=season_legend[j-1], line_width=3, color=season_color[j-1], line_alpha=0.5)
+        
+        p.add_tools(hover1)
+        tab = Panel(child=p, title=i)
+        tab_list.append(tab)
+
+    st.bokeh_chart(Tabs(tabs=tab_list),use_container_width=True)
+
+    
+
+    print("D")
+
+
+else :
+    print("E")
     
 
     
