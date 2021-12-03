@@ -60,7 +60,7 @@ st.sidebar.subheader('Contents')
 contents = st.sidebar.selectbox(
     "choose Contents",
     ('대쉬보드',"시간별 미세먼지","계절별 미세먼지","시간별 평균 미세먼지"),
-    3
+    0
     )
 
 
@@ -198,7 +198,18 @@ if contents == "시간별 미세먼지" :
 
 elif contents == "대쉬보드" :
     col1, col2, col3 = st.columns([5,4,1])
-    
+    state_geo =  'https://raw.githubusercontent.com/southkorea/seoul-maps/master/kostat/2013/json/seoul_municipalities_geo_simple.json'
+    json = pd.read_json(state_geo)
+    df_s = pd.DataFrame()
+
+    colors = [[65, 182, 196], [127, 205, 187], [199, 233, 180], [237, 248, 177], [255, 255, 204], [255, 237, 160], [254, 217, 118], [254, 178, 76], [253, 141, 60], [252, 78, 42], [227, 26, 28], [189, 0, 38], [128, 0, 38]]
+    df_s["coordinates"] = json["features"].apply(lambda row : row["geometry"]["coordinates"])
+    df_s["Address"] = json["features"].apply(lambda row : row["properties"]["name_eng"])
+    df_s["color"] = [ colors[ (random.randint(0, len(colors)-1))] for i in range(len(df_s))]
+    # st.dataframe(df_s)
+    # st.dataframe(json)
+
+
     if "B_pol" not in ss :
         ss.B_pol = 'SO2'
         ss.B_wtr = '기온(°C)'
@@ -207,7 +218,8 @@ elif contents == "대쉬보드" :
         B_col1_region = st.multiselect('region',data1["Address"].unique().tolist(),data1["Address"].unique().tolist()[:2])
         B_data1 = data1[data1["Address"].isin(B_col1_region)]
         B_data2 = data2[data2["name"].isin(B_col1_region)]
-        
+        df_s = df_s[df_s["Address"].isin(B_col1_region)]
+
         B_df = B_data1.groupby(['Address'], as_index= False).mean()
 
         st.pydeck_chart(\
@@ -227,18 +239,37 @@ elif contents == "대쉬보드" :
                         radius=200,\
                         get_elevation=[ss.B_pol],\
                         elevation_scale=10000,\
+                        elevation_range=[0, 10000],\
                         get_fill_color=["S02 * 256","NO2 * 256", "CO * 256"],\
                         pickable=True,\
                      )\
+                     ,pdk.Layer(\
+                        'PolygonLayer',\
+                        df_s,\
+                        id="geojson",\
+                        opacity = 0.3,\
+                        stroked=True,\
+                        filled =True,\
+                        get_polygon="coordinates",\
+                        wireframe=True,\
+                        pickable=True,\
+                        get_elevation=100,
+                        extruded=True,\
+                        get_fill_color="color",\
+                        get_line_color=[255,255,255],\
+                     )\
                      # ,pdk.Layer(\
                      #    'ScatterplotLayer',\
-                     #    data=B_data1.loc[:,['SO2', 'NO2', 'O3', 'CO', 'PM10', 'PM2.5','Longitude','Latitude']],\
-                     #    get_position='[Longitude,Latitude]',\
-                     #    radius=200,\
+                     #    data=B_data2,\
+                     #    get_position='[X좌표,Y좌표]',\
+                     #    get_radius='승차총승객수 * 10',\
                      #    elevation_scale=100,\
                      #    elevation_range=[0, 1000],\
                      #    pickable=True,\
                      #    extruded=True,\
+                     #    filled=True,\
+                     #    stroked=True,\
+                     #    get_fill_color=[255,255,255]\
                      # )\
                  ],\
             )
@@ -249,6 +280,14 @@ elif contents == "대쉬보드" :
         st.dataframe(B_data2)
 
         
+    with col3 :
+
+        st.subheader("pollution")
+        ss.B_pol = st.radio("Chose pollution", ['SO2', 'NO2', 'O3', 'CO', 'PM10', 'PM2.5'])
+        st.subheader("날씨")
+        ss.B_wtr = st.radio("Chose pollution", ['기온(°C)','강수량(mm)', '풍속(m/s)', '풍향(16방위)', '습도(%)', '현지기압(hPa)', '해면기압(hPa)','일조(hr)', '일사(MJ/m2)', '적설(cm)'])
+
+    print(ss.B_pol, ss.B_wtr)        
 
 
     with col2 :
@@ -285,15 +324,7 @@ elif contents == "대쉬보드" :
         st.pyplot(ax.figure)
         # st.bar_chart(df["승차총승객수"], use_container_width = True)
 
-    with col3 :
-
-        st.subheader("pollution")
-        ss.B_pol = st.radio("Chose pollution", ['SO2', 'NO2', 'O3', 'CO', 'PM10', 'PM2.5'])
-        st.subheader("날씨")
-        ss.B_wtr = st.radio("Chose pollution", ['기온(°C)','강수량(mm)', '풍속(m/s)', '풍향(16방위)', '습도(%)', '현지기압(hPa)', '해면기압(hPa)','일조(hr)', '일사(MJ/m2)', '적설(cm)'])
-
-    print(ss.B_pol, ss.B_wtr)        
-
+    
 
 elif contents ==  "계절별 미세먼지" :
     print("C")
